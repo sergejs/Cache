@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Encryptable",
+        "repositoryURL": "https://github.com/sergejs/encryptable.git",
+        "state": {
+          "branch": null,
+          "revision": "b3034ceb9ec62f40c3ab160a15c6e327238bbc18",
+          "version": "0.0.2"
+        }
+      },
+      {
+        "package": "Storable",
+        "repositoryURL": "https://github.com/sergejs/storable.git",
+        "state": {
+          "branch": null,
+          "revision": "6dd62ab07582b4a9df7bb5bc750f3381a877278e",
+          "version": "0.0.1"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
