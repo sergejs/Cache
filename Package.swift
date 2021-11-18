@@ -20,12 +20,14 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/sergejs/storable.git", from: "0.0.1"),
+        .package(url: "https://github.com/sergejs/ServiceContainer.git", from: "0.0.1"),
     ],
     targets: [
         .target(
             name: "Cache",
             dependencies: [
                 .product(name: "Storable", package: "Storable"),
+                .product(name: "ServiceContainer", package: "ServiceContainer"),
             ]
         ),
         .testTarget(

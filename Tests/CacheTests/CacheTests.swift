@@ -12,29 +12,28 @@ import XCTest
 final class CacheTests: XCTestCase {
     var sut: Cache<String, Data>?
 
-    func testReadWriteSuccess() {
-        self.sut = Cache<String, Data>()
-        let sut = sut!
+    func testReadWriteSuccess() async {
+        let sut = Cache<String, Data>()
         let data = "Data".data(using: .utf8)!
 
-        sut.insert(data, forKey: "key")
-        let storedData = sut.value(forKey: "key")
+        await sut.insert(data, forKey: "key")
+        let storedData = await sut.value(forKey: "key")
 
         XCTAssertEqual(storedData, data)
     }
 
-    func testReadWriteRemoveSuccess() {
+    func testReadWriteRemoveSuccess() async {
         self.sut = Cache<String, Data>()
         let sut = sut!
         let data = "Data".data(using: .utf8)!
         var storedData: Data?
 
-        sut.insert(data, forKey: "key")
-        storedData = sut.value(forKey: "key")
+        await sut.insert(data, forKey: "key")
+        storedData = await sut.value(forKey: "key")
         XCTAssertEqual(storedData, data)
 
-        sut.removeValue(forKey: "key")
-        storedData = sut.value(forKey: "key")
+        await sut.removeValue(forKey: "key")
+        storedData = await sut.value(forKey: "key")
         XCTAssertNil(storedData)
     }
 
@@ -46,8 +45,8 @@ final class CacheTests: XCTestCase {
         let sut = sut!
         let data = "Data".data(using: .utf8)!
         var storedData: Data?
-        sut.insert(data, forKey: "key")
-        storedData = sut.value(forKey: "key")
+        await sut.insert(data, forKey: "key")
+        storedData = await sut.value(forKey: "key")
         XCTAssertEqual(storedData, data)
 
         do {
@@ -69,24 +68,24 @@ final class CacheTests: XCTestCase {
         } catch {
             XCTFail("Unexpected error")
         }
-        storedData = loadedCache?.value(forKey: "key")
+        storedData = await loadedCache?.value(forKey: "key")
         XCTAssertEqual(storedData, data)
     }
 
-    func testLifeTimeSuccess() {
+    func testLifeTimeSuccess() async {
         self.sut = Cache<String, Data>(
             entryLifetime: 60 * 60 * 24 * 31
         )
         let sut = sut!
         let data = "Data".data(using: .utf8)!
         var storedData: Data?
-        sut.insert(data, forKey: "key")
-        storedData = sut.value(forKey: "key")
+        await sut.insert(data, forKey: "key")
+        storedData = await sut.value(forKey: "key")
 
         XCTAssertEqual(storedData, data)
     }
 
-    func testLifeTimeTimemout() {
+    func testLifeTimeTimemout() async {
         var firstDate = true
         let dateProvider: Cache.DateProvider = {
             if firstDate {
@@ -103,8 +102,8 @@ final class CacheTests: XCTestCase {
         let sut = sut!
         let data = "Data".data(using: .utf8)!
         var storedData: Data?
-        sut.insert(data, forKey: "key")
-        storedData = sut.value(forKey: "key")
+        await sut.insert(data, forKey: "key")
+        storedData = await sut.value(forKey: "key")
         XCTAssertNil(storedData)
     }
 
@@ -137,14 +136,14 @@ final class CacheTests: XCTestCase {
         var storedData1: Data?
         var storedData2: Data?
 
-        sut.insert(data1, forKey: "key")
+        await sut.insert(data1, forKey: "key")
 
         step = .secondSave
-        sut.insert(data2, forKey: "key2")
+        await sut.insert(data2, forKey: "key2")
 
         step = .read
-        storedData1 = sut.value(forKey: "key")
-        storedData2 = sut.value(forKey: "key2")
+        storedData1 = await sut.value(forKey: "key")
+        storedData2 = await sut.value(forKey: "key2")
 
         XCTAssertEqual(storedData1, data1)
         XCTAssertEqual(storedData2, data2)
@@ -168,8 +167,8 @@ final class CacheTests: XCTestCase {
                     with: URL(string: "MEM")!
                 )
         } catch {}
-        storedData1 = loadedCache?.value(forKey: "key")
-        storedData2 = loadedCache?.value(forKey: "key2")
+        storedData1 = await loadedCache?.value(forKey: "key")
+        storedData2 = await loadedCache?.value(forKey: "key2")
 
         XCTAssertNil(storedData1)
         XCTAssertEqual(storedData2, data2)

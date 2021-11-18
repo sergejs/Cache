@@ -5,13 +5,20 @@ public protocol Cacheable: AnyObject {
     associatedtype Key
     associatedtype Value
 
-    func insert(_ value: Value, forKey key: Key)
-    func value(forKey key: Key) -> Value?
-    func removeValue(forKey key: Key)
+    func insert(_ value: Value, forKey key: Key) async
+    func value(forKey key: Key) async -> Value?
+    func removeValue(forKey key: Key) async
 }
 
-public final class Cache<K: Hashable, V>: Cacheable {
-    // MARK: Lifecycle
+public actor Cache<K: Hashable, V> {
+    public typealias DateProvider = () -> Date
+    public typealias Key = K
+    public typealias Value = V
+
+    private let wrapped = NSCache<WrappedKey, Entry>()
+    private let keyTracker = KeyTracker()
+    private let dateProvider: DateProvider
+    private let entryLifetime: TimeInterval?
 
     public init(
         dateProvider: @escaping DateProvider = { Date() },
@@ -22,17 +29,13 @@ public final class Cache<K: Hashable, V>: Cacheable {
 
         wrapped.delegate = keyTracker
     }
+}
 
-    // MARK: Public
-
-    public typealias DateProvider = () -> Date
-    public typealias Key = K
-    public typealias Value = V
-
+extension Cache: Cacheable {
     public func insert(
         _ value: Value,
         forKey key: Key
-    ) {
+    ) async {
         let date: Date?
         if let entryLifetime = entryLifetime {
             date = dateProvider().addingTimeInterval(entryLifetime)
@@ -45,67 +48,53 @@ public final class Cache<K: Hashable, V>: Cacheable {
             value: value,
             expirationDate: date
         )
-        wrapped.setObject(entry, forKey: WrappedKey(key))
+        let wrappedKey = WrappedKey(key)
+        wrapped.setObject(entry, forKey: wrappedKey)
         keyTracker.keys.insert(key)
     }
 
-    public func value(forKey key: Key) -> Value? {
+    public func value(forKey key: Key) async -> Value? {
         guard
             let entry = wrapped.object(forKey: WrappedKey(key))
         else {
             return nil
         }
 
-        if let expirationDate = entry.expirationDate,
-           dateProvider() >= expirationDate {
-            removeValue(forKey: key)
+        if let expirationDate = entry.expirationDate, dateProvider() >= expirationDate {
+            await removeValue(forKey: key)
+
             return nil
         }
 
         return entry.value
     }
 
-    public func removeValue(forKey key: Key) {
+    public func removeValue(forKey key: Key) async {
         wrapped.removeObject(forKey: WrappedKey(key))
     }
-
-    // MARK: Private
-
-    private let wrapped = NSCache<WrappedKey, Entry>()
-    private let dateProvider: DateProvider
-    private let entryLifetime: TimeInterval?
-    private let keyTracker = KeyTracker()
 }
 
-private extension Cache {
+extension Cache {
     final class WrappedKey: NSObject {
-        // MARK: Lifecycle
-
         init(_ key: Key) {
             self.key = key
         }
-
-        // MARK: Internal
 
         let key: Key
 
         override var hash: Int { key.hashValue }
 
         override func isEqual(_ object: Any?) -> Bool {
-            guard
-                let value = object as? WrappedKey
-            else {
-                return false
-            }
-
-            return value.key == key
+            (object as? WrappedKey)?.key == key
         }
     }
 }
 
-private extension Cache {
-    final class Entry {
-        // MARK: Lifecycle
+extension Cache {
+    final class Entry: Hashable {
+        let key: Key
+        let value: Value
+        let expirationDate: Date?
 
         init(
             key: Key,
@@ -117,15 +106,17 @@ private extension Cache {
             self.expirationDate = expirationDate
         }
 
-        // MARK: Internal
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(key)
+        }
 
-        let key: Key
-        let value: Value
-        let expirationDate: Date?
+        static func == (lhs: Cache<K, V>.Entry, rhs: Cache<K, V>.Entry) -> Bool {
+            lhs.key == rhs.key
+        }
     }
 }
 
-private extension Cache {
+extension Cache {
     final class KeyTracker: NSObject, NSCacheDelegate {
         var keys = Set<Key>()
 
@@ -147,41 +138,26 @@ private extension Cache {
 extension Cache.Entry: Codable where K: Codable, V: Codable {}
 
 private extension Cache {
-    func entry(forKey key: Key) -> Entry? {
+    func entry(forKey key: Key) async -> Entry? {
         guard
             let entry = wrapped.object(forKey: WrappedKey(key))
         else {
             return nil
         }
 
-        if
-            let expirationDate = entry.expirationDate,
-            dateProvider() >= expirationDate {
-            removeValue(forKey: key)
+        if let expirationDate = entry.expirationDate,
+           dateProvider() >= expirationDate {
+            await removeValue(forKey: key)
+
             return nil
         }
 
         return entry
     }
 
-    func insert(_ entry: Entry) {
+    func insert(_ entry: Entry) async {
         wrapped.setObject(entry, forKey: WrappedKey(entry.key))
         keyTracker.keys.insert(entry.key)
-    }
-}
-
-extension Cache: Codable where Key: Codable, Value: Codable {
-    public convenience init(from decoder: Decoder) throws {
-        self.init()
-
-        let container = try decoder.singleValueContainer()
-        let entries = try container.decode([Entry].self)
-        entries.forEach(insert)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(keyTracker.keys.compactMap(entry))
     }
 }
 
@@ -190,8 +166,15 @@ public extension Cache where Key: Codable, Value: Codable {
         to url: URL,
         using storage: Storable
     ) async throws {
-        let data = try JSONEncoder()
-            .encode(self)
+        let keys = keyTracker.keys
+        var entries = Set<Entry>()
+        for key in keys {
+            if let entry = await entry(forKey: key) {
+                entries.insert(entry)
+            }
+        }
+
+        let data = try JSONEncoder().encode(entries)
 
         try await storage.store(data, to: url)
     }
@@ -201,7 +184,14 @@ public extension Cache where Key: Codable, Value: Codable {
         with url: URL
     ) async throws -> Cache? {
         if let data = try await storage.load(from: url) {
-            let cache = try JSONDecoder().decode(Cache.self, from: data)
+            let cache = Cache<Key, Value>()
+
+            let entries = try JSONDecoder().decode(Set<Entry>.self, from: data)
+
+            for entrty in entries {
+                await cache.insert(entrty)
+            }
+
             return cache
         }
 

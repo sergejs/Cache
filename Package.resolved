@@ -11,6 +11,15 @@
         }
       },
       {
+        "package": "ServiceContainer",
+        "repositoryURL": "https://github.com/sergejs/ServiceContainer.git",
+        "state": {
+          "branch": null,
+          "revision": "c76d38291c5352ada3d4949b8874cebedd3e7da8",
+          "version": "0.0.1"
+        }
+      },
+      {
         "package": "Storable",
         "repositoryURL": "https://github.com/sergejs/storable.git",
         "state": {
