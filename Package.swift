@@ -19,8 +19,8 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/sergejs/storable.git", from: "0.0.1"),
-        .package(url: "https://github.com/sergejs/ServiceContainer.git", from: "0.0.1"),
+        .package(url: "https://github.com/sergejs/Storable.git", .branch("main")),
+        .package(url: "https://github.com/sergejs/ServiceContainer.git", .branch("main")),
     ],
     targets: [
         .target(
