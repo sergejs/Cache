@@ -14,7 +14,6 @@ let package = Package(
     products: [
         .library(
             name: "Cache",
-            type: .dynamic,
             targets: ["Cache"]
         ),
     ],
