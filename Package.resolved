@@ -3,29 +3,29 @@
     "pins": [
       {
         "package": "Encryptable",
-        "repositoryURL": "https://github.com/sergejs/encryptable.git",
+        "repositoryURL": "https://github.com/sergejs/Encryptable.git",
         "state": {
           "branch": null,
-          "revision": "b3034ceb9ec62f40c3ab160a15c6e327238bbc18",
-          "version": "0.0.2"
+          "revision": "4b41d656a6112e64dfc6c1e00602c0f05c752b07",
+          "version": "0.2.0"
         }
       },
       {
         "package": "ServiceContainer",
         "repositoryURL": "https://github.com/sergejs/ServiceContainer.git",
         "state": {
-          "branch": "main",
-          "revision": "769febf991b1069d8790d23e0e701fd202c8e4a6",
-          "version": null
+          "branch": null,
+          "revision": "9fddea459393de1d06ad8ef7df3c264f5e98335c",
+          "version": "0.2.0"
         }
       },
       {
         "package": "Storable",
         "repositoryURL": "https://github.com/sergejs/Storable.git",
         "state": {
-          "branch": "main",
-          "revision": "6dd62ab07582b4a9df7bb5bc750f3381a877278e",
-          "version": null
+          "branch": null,
+          "revision": "d0ed45d3eabe38a9aa605ed2d8d271d2d2faa4cb",
+          "version": "0.2.0"
         }
       }
     ]
